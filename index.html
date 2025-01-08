@@ -6,24 +6,17 @@
 </head>
 <body>
     <div class="container">
-        <button id="connectBtn">Connect Power Meter</button>
+        <button id="connectPowerBtn">Connect Power Meter</button>
+        <button id="connectHRMBtn">Connect Heart Rate Monitor</button>
         <div id="status"></div>
         <canvas id="powerGraph"></canvas>
         <div id="currentPower">Current Power: -- W</div>
+        <div id="cadence">Cadence: -- RPM</div>
+        <div id="heartRate">Heart Rate: -- BPM</div>
+        <div id="averages"></div>
     </div>
-    <script src="src/bluetooth.js"></script>
+    </div>    <script src="src/bluetooth.js"></script>
     <script src="src/powerGraph.js"></script>
     <script src="src/main.js"></script>
-<div class="averages-container">
-    <div id="3s-power" class="average-box">3s avg: --W</div>
-    <div id="5s-power" class="average-box">5s avg: --W</div>
-    <div id="1m-power" class="average-box">1min avg: --W</div>
-    <div id="5m-power" class="average-box">5min avg: --W</div>
-</div>
-
-
 </body>
-
-
-
 </html>
