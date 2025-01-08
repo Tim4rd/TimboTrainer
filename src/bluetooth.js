@@ -1,17 +1,25 @@
 class BluetoothPowerMeter {
     constructor() {
+        // Original working power meter properties
         this.device = null;
         this.characteristic = null;
         this.onPowerUpdate = null;
         this.isConnected = false;
         this.lastPower = 0;
         
-        // Bluetooth Constants
+        // Add HR properties
+        this.hrDevice = null;
+        this.hrCharacteristic = null;
+        this.onHeartRateUpdate = null;
+        this.lastHeartRate = 0;
+        
+        // Original working constants
         this.CYCLING_POWER_SERVICE = 'cycling_power';
         this.POWER_MEASUREMENT_CHARACTERISTIC = 'cycling_power_measurement';
         this.POWER_FEATURE_CHARACTERISTIC = 'cycling_power_feature';
     }
 
+    // Keep the original working power meter connect method
     async connect() {
         try {
             this.device = await navigator.bluetooth.requestDevice({
@@ -24,16 +32,9 @@ class BluetoothPowerMeter {
             this.device.addEventListener('gattserverdisconnected', this.handleDisconnection.bind(this));
             
             const server = await this.device.gatt.connect();
-            console.log('Connected to GATT server');
-
             const service = await server.getPrimaryService(this.CYCLING_POWER_SERVICE);
-            console.log('Got cycling power service');
-
-            // Get power measurement characteristic
             this.characteristic = await service.getCharacteristic(this.POWER_MEASUREMENT_CHARACTERISTIC);
-            console.log('Got power measurement characteristic');
-
-            // Start notifications
+            
             await this.characteristic.startNotifications();
             this.characteristic.addEventListener('characteristicvaluechanged',
                 this.handlePowerData.bind(this));
@@ -47,30 +48,50 @@ class BluetoothPowerMeter {
         }
     }
 
+    async connectHRM() {
+        try {
+            this.hrDevice = await navigator.bluetooth.requestDevice({
+                filters: [{ services: ['heart_rate'] }]
+            });
+
+            const server = await this.hrDevice.gatt.connect();
+            const service = await server.getPrimaryService('heart_rate');
+            this.hrCharacteristic = await service.getCharacteristic('heart_rate_measurement');
+            
+            await this.hrCharacteristic.startNotifications();
+            this.hrCharacteristic.addEventListener('characteristicvaluechanged',
+                this.handleHeartRateData.bind(this));
+            
+            return true;
+        } catch (error) {
+            console.error('HRM connection error:', error);
+            return false;
+        }
+    }
+
+    handleHeartRateData(event) {
+        const value = event.target.value;
+        const heartRate = value.getUint8(1);
+        if (this.onHeartRateUpdate) {
+            this.onHeartRateUpdate(heartRate);
+        }
+    }
+
     handlePowerData(event) {
         try {
             const value = event.target.value;
-            
-            // Parse flags (first 16 bits)
             const flags = value.getUint16(0, true);
             
-            // Check data format based on flags
-            const hasCreankRevData = flags & 0x01;
+            // Add console log to check flags
+            console.log('Power Data Flags:', flags.toString(2));
+            
+            // Check for crank data flag (bit 1)
             const hasCrankData = flags & 0x02;
-            const hasAccumulatedEnergy = flags & 0x04;
-            
-            // Power is typically in bytes 2-3 (after flags)
-            let powerOffset = 2;
-            
-            // Adjust offset based on optional fields
-            if (hasCreankRevData) powerOffset += 2;
-            if (hasCrankData) powerOffset += 4;
-            if (hasAccumulatedEnergy) powerOffset += 2;
+            console.log('Has Crank Data:', hasCrankData);
             
             // Get power value
-            const power = value.getUint16(powerOffset, true);
+            const power = value.getUint16(2, true);
             
-            // Validate power reading
             if (this.isValidPowerReading(power)) {
                 this.lastPower = power;
                 if (this.onPowerUpdate) {
@@ -78,12 +99,32 @@ class BluetoothPowerMeter {
                 }
             }
             
+            // Enhanced cadence parsing
+            if (hasCrankData) {
+                const crankRevs = value.getUint16(4, true);
+                const crankTime = value.getUint16(6, true);
+                console.log('Crank Data:', { revs: crankRevs, time: crankTime });
+                
+                const cadence = this.calculateCadence(crankRevs, crankTime);
+                console.log('Calculated Cadence:', cadence);
+                
+                if (cadence > 0) {
+                    this.lastCadence = cadence;
+                    if (this.onCadenceUpdate) {
+                        this.onCadenceUpdate(cadence);
+                    }
+                }
+            }
         } catch (error) {
-            console.error('Error parsing power data:', error);
+            console.error('Error parsing power/cadence data:', error);
         }
     }
 
-    isValidPowerReading(power) {
+    calculateCadence(revs, time) {
+        // Basic cadence calculation
+        // Note: This is a simplified version, you might need to adjust based on your specific power meter
+        return revs > 0 ? Math.round((revs / time) * 60) : 0;
+    }    isValidPowerReading(power) {
         // Basic validation rules
         const MAX_POWER = 3000; // Reasonable maximum human power output
         const MAX_POWER_CHANGE = 500; // Max reasonable power change between readings
@@ -101,6 +142,20 @@ class BluetoothPowerMeter {
         }
         
         return true;
+    }
+
+    isValidHeartRate(heartRate) {
+        const MAX_HEART_RATE = 250;
+        const MIN_HEART_RATE = 30;
+        return heartRate >= MIN_HEART_RATE && heartRate <= MAX_HEART_RATE;
+    }
+
+    setHeartRateCallback(callback) {
+        this.onHeartRateUpdate = callback;
+    }
+
+    getLastHeartRate() {
+        return this.lastHeartRate;
     }
 
     handleDisconnection() {
