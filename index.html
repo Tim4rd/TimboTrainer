@@ -3,20 +3,86 @@
 <head>
     <title>Cycling Power Meter</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
     <div class="container">
-        <button id="connectPowerBtn">Connect Power Meter</button>
-        <button id="connectHRMBtn">Connect Heart Rate Monitor</button>
-        <div id="status"></div>
-        <canvas id="powerGraph"></canvas>
-        <div id="currentPower">Current Power: -- W</div>
-        <div id="cadence">Cadence: -- RPM</div>
-        <div id="heartRate">Heart Rate: -- BPM</div>
-        <div id="averages"></div>
+        <!-- Connection buttons at top -->
+        <div class="connection-controls">
+            <button id="connectBtn">Connect Power Meter</button>
+            <button id="connectHRButton">Connect Heart Rate</button>
+            <button id="connectCSCButton">Connect Speed/Cadence</button>
+        </div>
+
+        <!-- <div id="status"></div> -->
+        
+        <div class="main-display">
+            <!-- Left metrics -->
+            <div class="grey-box">
+                <div class="metrics">
+                    <div>
+                        <span class="metric-label">
+                            <i class="fas fa-bolt connection-indicator"></i>
+                            Current Power:
+                        </span>
+                        <span class="metric-value" id="currentPower">-- W</span>
+                    </div>
+                    <div>
+                        <span class="metric-label">Average Power:</span>
+                        <span class="average-value" id="avgPower">-- W</span>
+                    </div>
+                    
+                    <div>
+                        <span class="metric-label">
+                            <i class="fas fa-heart connection-indicator"></i>
+                            Heart Rate:
+                        </span>
+                        <span class="metric-value" id="heartRate">-- BPM</span>
+                    </div>
+                    <div>
+                        <span class="metric-label">Average HR:</span>
+                        <span class="average-value" id="avgHeartRate">-- BPM</span>
+                    </div>
+                    
+                    <div>
+                        <span class="metric-label">
+                            <i class="fas fa-bicycle connection-indicator"></i>
+                            Cadence:
+                        </span>
+                        <span class="metric-value" id="cadence">-- RPM</span>
+                    </div>
+                    <div>
+                        <span class="metric-label">Average Cadence:</span>
+                        <span class="average-value" id="avgCadence">-- RPM</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graph section -->
+            <div class="graph-section">
+                <canvas id="powerGraph"></canvas>
+            </div>
+
+            <!-- Averages box -->
+            <div class="grey-box">
+                <div id="averages">
+                    <div class="average-box">3s: <span id="avg3s">-- W</span></div>
+                    <div class="average-box">5s: <span id="avg5s">-- W</span></div>
+                    <div class="average-box">1min: <span id="avg1min">-- W</span></div>
+                    <div class="average-box">5min: <span id="avg5min">-- W</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recording controls at bottom -->
+        <div class="recording-controls">
+            <button id="startRecordingBtn">Start Recording</button>
+            <button id="stopRecordingBtn" disabled>Stop & Save</button>
+        </div>
     </div>
-    </div>    <script src="src/bluetooth.js"></script>
+    <script src="src/bluetooth.js"></script>
     <script src="src/powerGraph.js"></script>
+    <script src="src/workout-recorder.js"></script>
     <script src="src/main.js"></script>
 </body>
 </html>
