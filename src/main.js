@@ -13,12 +13,26 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentHeartRate = 0;
     let currentCadence = 0;
 
+    // Add these variables to track running totals
+    let powerTotal = 0;
+    let heartRateTotal = 0;
+    let cadenceTotal = 0;
+    let dataPoints = 0;
+
     // Set up power callback
     powerMeter.onPowerUpdate = (power) => {
         currentPower = power;
-        document.getElementById('currentPower').textContent = `Current Power: ${power}W`;
+        document.getElementById('currentPower').textContent = `${power}W`;
         powerGraph.addPowerPoint(power);
+        
+        // Update running averages
+        powerTotal += power;
+        dataPoints++;
+        document.getElementById('avgPower').textContent = `${Math.round(powerTotal / dataPoints)}W`;
+        
+        // Update averages display
         updateAveragesDisplay(powerGraph.averages);
+        
         if (workoutRecorder.recording) {
             workoutRecorder.addDataPoint(currentPower, currentHeartRate, currentCadence);
         }
@@ -26,18 +40,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     powerMeter.onHeartRateUpdate = (heartRate) => {
         currentHeartRate = heartRate;
-        document.getElementById('heartRate').textContent = `Heart Rate: ${heartRate} BPM`;
+        document.getElementById('heartRate').textContent = `${heartRate} BPM`;
+        
+        // Update running average
+        heartRateTotal += heartRate;
+        document.getElementById('avgHeartRate').textContent = 
+            `${Math.round(heartRateTotal / dataPoints)} BPM`;
     };
 
     powerMeter.onCadenceUpdate = (cadence) => {
-        console.log('Cadence update received:', cadence); // Debug log
         currentCadence = cadence;
-        const cadenceElement = document.getElementById('cadence');
-        if (cadenceElement) {
-            cadenceElement.textContent = `Cadence: ${cadence} RPM`;
-        } else {
-            console.error('Cadence element not found');
-        }
+        document.getElementById('cadence').textContent = `${cadence} RPM`;
+        
+        // Update running average
+        cadenceTotal += cadence;
+        document.getElementById('avgCadence').textContent = 
+            `${Math.round(cadenceTotal / dataPoints)} RPM`;
     };
 
     // Add recording controls
@@ -64,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const success = await powerMeter.connect();
             if (success) {
+                resetAverages();  // Reset when connecting
                 document.querySelector('.fa-bolt').classList.add('connected');
                 document.getElementById('connectBtn').classList.add('connected');
             }
@@ -109,4 +128,12 @@ function updateAveragesDisplay(averages) {
         <div class="average-box">1min: ${Math.round(averages['1min'])}W</div>
         <div class="average-box">5min: ${Math.round(averages['5min'])}W</div>
     `;
+}
+
+// Reset function for when starting a new session
+function resetAverages() {
+    powerTotal = 0;
+    heartRateTotal = 0;
+    cadenceTotal = 0;
+    dataPoints = 0;
 }
