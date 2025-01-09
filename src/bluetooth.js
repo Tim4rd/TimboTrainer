@@ -1,25 +1,33 @@
 class BluetoothPowerMeter {
     constructor() {
-        // Original working power meter properties
         this.device = null;
-        this.characteristic = null;
+        this.server = null;
+        this.service = null;
+        this.powerCharacteristic = null;
+        this.heartRateCharacteristic = null;
+        this.cscCharacteristic = null;
+        this.powerCallback = null;
+        this.heartRateCallback = null;
+        this.cadenceCallback = null;
+        this.lastCrankRevolutions = undefined;
+        this.lastCrankEventTime = undefined;
         this.onPowerUpdate = null;
         this.isConnected = false;
         this.lastPower = 0;
-        
-        // Add HR properties
         this.hrDevice = null;
         this.hrCharacteristic = null;
         this.onHeartRateUpdate = null;
         this.lastHeartRate = 0;
-        
-        // Original working constants
+        this.cscDevice = null;
+        this.cscCharacteristic = null;
+        this.onCadenceUpdate = null;
+        this.lastCadence = 0;
         this.CYCLING_POWER_SERVICE = 'cycling_power';
         this.POWER_MEASUREMENT_CHARACTERISTIC = 'cycling_power_measurement';
-        this.POWER_FEATURE_CHARACTERISTIC = 'cycling_power_feature';
+        this.CYCLING_SPEED_CADENCE_SERVICE = 0x1816;
+        this.CSC_MEASUREMENT_CHARACTERISTIC = '00002a5b-0000-1000-8000-00805f9b34fb';
     }
 
-    // Keep the original working power meter connect method
     async connect() {
         try {
             this.device = await navigator.bluetooth.requestDevice({
@@ -29,7 +37,11 @@ class BluetoothPowerMeter {
 
             console.log('Device selected:', this.device.name);
             
-            this.device.addEventListener('gattserverdisconnected', this.handleDisconnection.bind(this));
+            this.device.addEventListener('gattserverdisconnected', () => {
+                console.log('Device disconnected');
+                this.isConnected = false;
+                this.handleDisconnection();
+            });
             
             const server = await this.device.gatt.connect();
             const service = await server.getPrimaryService(this.CYCLING_POWER_SERVICE);
@@ -37,7 +49,7 @@ class BluetoothPowerMeter {
             
             await this.characteristic.startNotifications();
             this.characteristic.addEventListener('characteristicvaluechanged',
-                this.handlePowerData.bind(this));
+                (event) => this.handlePowerData(event));
             
             this.isConnected = true;
             return true;
@@ -53,113 +65,145 @@ class BluetoothPowerMeter {
             this.hrDevice = await navigator.bluetooth.requestDevice({
                 filters: [{ services: ['heart_rate'] }]
             });
-
+            
             const server = await this.hrDevice.gatt.connect();
             const service = await server.getPrimaryService('heart_rate');
             this.hrCharacteristic = await service.getCharacteristic('heart_rate_measurement');
             
             await this.hrCharacteristic.startNotifications();
             this.hrCharacteristic.addEventListener('characteristicvaluechanged',
-                this.handleHeartRateData.bind(this));
-            
+                (event) => {
+                    const value = event.target.value;
+                    const heartRate = value.getUint8(1);
+                    console.log('Heart rate received:', heartRate);
+                    if (this.onHeartRateUpdate) {
+                        this.onHeartRateUpdate(heartRate);
+                    }
+                });
+
             return true;
         } catch (error) {
-            console.error('HRM connection error:', error);
+            console.error('Error connecting to heart rate monitor:', error);
             return false;
         }
     }
 
-    handleHeartRateData(event) {
-        const value = event.target.value;
-        const heartRate = value.getUint8(1);
-        if (this.onHeartRateUpdate) {
-            this.onHeartRateUpdate(heartRate);
+    async connectCSC() {
+        try {
+            this.cscDevice = await navigator.bluetooth.requestDevice({
+                filters: [{ services: [this.CYCLING_SPEED_CADENCE_SERVICE] }]
+            });
+            
+            const server = await this.cscDevice.gatt.connect();
+            const service = await server.getPrimaryService(this.CYCLING_SPEED_CADENCE_SERVICE);
+            this.cscCharacteristic = await service.getCharacteristic(this.CSC_MEASUREMENT_CHARACTERISTIC);
+            
+            this.cscDevice.addEventListener('gattserverdisconnected', () => {
+                console.log('CSC device disconnected');
+                this.handleCSCDisconnection();
+            });
+            
+            await this.cscCharacteristic.startNotifications();
+            this.cscCharacteristic.addEventListener('characteristicvaluechanged',
+                (event) => {
+                    console.log('CSC data received');
+                    this.handleCSCData(event);
+                });
+            
+            return true;
+        } catch (error) {
+            console.error('Error connecting to speed/cadence sensor:', error);
+            return false;
+        }
+    }
+
+    handleCSCData(event) {
+        try {
+            const value = event.target.value;
+            const flags = value.getUint8(0);
+            
+            const hasWheelData = flags & 0x01;
+            const hasCrankData = flags & 0x02;
+            
+            let offset = 1;
+            
+            // Handle wheel data first if present
+            if (hasWheelData) {
+                const wheelRevolutions = value.getUint32(offset, true);
+                offset += 4;
+                const wheelEventTime = value.getUint16(offset, true);
+                offset += 2;
+                
+                if (this.onSpeedUpdate) {
+                    this.onSpeedUpdate(wheelRevolutions, wheelEventTime);
+                }
+            }
+            
+            // Handle crank data
+            if (hasCrankData) {
+                const crankRevolutions = value.getUint16(offset, true);
+                offset += 2;
+                const crankEventTime = value.getUint16(offset, true);
+                
+                if (this.lastCrankRevolutions !== undefined) {
+                    const revDiff = crankRevolutions - this.lastCrankRevolutions;
+                    const timeDiff = crankEventTime - this.lastCrankEventTime;
+                    
+                    // Handle rollover
+                    const adjustedTimeDiff = timeDiff > 0 ? timeDiff : 65536 + timeDiff;
+                    
+                    if (adjustedTimeDiff > 0) {
+                        // Calculate cadence in RPM
+                        const cadence = Math.round((revDiff * 60 * 1024) / adjustedTimeDiff);
+                        
+                        if (this.onCadenceUpdate) {
+                            this.onCadenceUpdate(cadence);
+                        }
+                    }
+                }
+                
+                this.lastCrankRevolutions = crankRevolutions;
+                this.lastCrankEventTime = crankEventTime;
+            }
+        } catch (error) {
+            console.error('Error parsing CSC data:', error);
         }
     }
 
     handlePowerData(event) {
         try {
             const value = event.target.value;
+            console.log('Raw data received:', value);
+            
+            const bytes = new Uint8Array(value.buffer);
+            console.log('Data bytes:', Array.from(bytes));
+            
             const flags = value.getUint16(0, true);
+            console.log('Flags:', flags.toString(2));
             
-            // Add console log to check flags
-            console.log('Power Data Flags:', flags.toString(2));
-            
-            // Check for crank data flag (bit 1)
-            const hasCrankData = flags & 0x02;
-            console.log('Has Crank Data:', hasCrankData);
-            
-            // Get power value
             const power = value.getUint16(2, true);
+            console.log('Parsed power:', power);
             
-            if (this.isValidPowerReading(power)) {
-                this.lastPower = power;
-                if (this.onPowerUpdate) {
-                    this.onPowerUpdate(power);
-                }
-            }
-            
-            // Enhanced cadence parsing
-            if (hasCrankData) {
-                const crankRevs = value.getUint16(4, true);
-                const crankTime = value.getUint16(6, true);
-                console.log('Crank Data:', { revs: crankRevs, time: crankTime });
-                
-                const cadence = this.calculateCadence(crankRevs, crankTime);
-                console.log('Calculated Cadence:', cadence);
-                
-                if (cadence > 0) {
-                    this.lastCadence = cadence;
-                    if (this.onCadenceUpdate) {
-                        this.onCadenceUpdate(cadence);
-                    }
-                }
+            if (this.onPowerUpdate) {
+                console.log('Calling power update with:', power);
+                this.onPowerUpdate(power);
+            } else {
+                console.warn('No power update callback set');
             }
         } catch (error) {
-            console.error('Error parsing power/cadence data:', error);
+            console.error('Error parsing power data:', error, error.stack);
         }
     }
 
-    calculateCadence(revs, time) {
-        // Basic cadence calculation
-        // Note: This is a simplified version, you might need to adjust based on your specific power meter
-        return revs > 0 ? Math.round((revs / time) * 60) : 0;
-    }    isValidPowerReading(power) {
-        // Basic validation rules
-        const MAX_POWER = 3000; // Reasonable maximum human power output
-        const MAX_POWER_CHANGE = 500; // Max reasonable power change between readings
-        
-        if (power < 0 || power > MAX_POWER) {
-            return false;
+    disconnect() {
+        if (this.device && this.device.gatt.connected) {
+            this.device.gatt.disconnect();
+            this.isConnected = false;
         }
-        
-        // Check for unrealistic jumps in power
-        if (this.lastPower > 0) {
-            const powerChange = Math.abs(power - this.lastPower);
-            if (powerChange > MAX_POWER_CHANGE) {
-                return false;
-            }
-        }
-        
-        return true;
-    }
-
-    isValidHeartRate(heartRate) {
-        const MAX_HEART_RATE = 250;
-        const MIN_HEART_RATE = 30;
-        return heartRate >= MIN_HEART_RATE && heartRate <= MAX_HEART_RATE;
-    }
-
-    setHeartRateCallback(callback) {
-        this.onHeartRateUpdate = callback;
-    }
-
-    getLastHeartRate() {
-        return this.lastHeartRate;
     }
 
     handleDisconnection() {
-        console.log('Device disconnected');
+        console.log('Handling disconnection');
         this.isConnected = false;
         this.characteristic = null;
         
@@ -179,14 +223,19 @@ class BluetoothPowerMeter {
         }
     }
 
-    disconnect() {
-        if (this.device && this.device.gatt.connected) {
-            this.device.gatt.disconnect();
-            this.isConnected = false;
+    async handleCSCDisconnection() {
+        try {
+            if (this.cscDevice && !this.cscDevice.gatt.connected) {
+                await this.cscDevice.gatt.connect();
+                const service = await this.cscDevice.gatt.getPrimaryService(this.CYCLING_SPEED_CADENCE_SERVICE);
+                this.cscCharacteristic = await service.getCharacteristic(this.CSC_MEASUREMENT_CHARACTERISTIC);
+                await this.cscCharacteristic.startNotifications();
+                this.cscCharacteristic.addEventListener('characteristicvaluechanged',
+                    (event) => this.handleCSCData(event));
+                console.log('CSC device reconnected');
+            }
+        } catch (error) {
+            console.error('CSC reconnection failed:', error);
         }
-    }
-
-    getConnectionStatus() {
-        return this.isConnected;
     }
 }
