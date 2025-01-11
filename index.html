@@ -3,12 +3,21 @@
 <head>
     <title>Cycling Power Meter</title>
     <link rel="stylesheet" href="style.css">
+    <meta http-equiv="Content-Security-Policy" 
+        content="default-src 'self'; 
+                 script-src 'self' 'unsafe-inline' 'unsafe-eval'; 
+                 style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; 
+                 font-src 'self' https://cdnjs.cloudflare.com; 
+                 img-src 'self' data:;">
+    
+    <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
     <div class="container">
         <!-- Connection buttons at top -->
         <div class="connection-controls">
+            <span class="logo">TimboTrainer</span>
             <button id="connectBtn">Connect Power Meter</button>
             <button id="connectHRButton">Connect Heart Rate</button>
             <button id="connectCSCButton">Connect Speed/Cadence</button>
@@ -80,9 +89,11 @@
             <button id="stopRecordingBtn" disabled>Stop & Save</button>
         </div>
     </div>
-    <script src="src/bluetooth.js"></script>
-    <script src="src/powerGraph.js"></script>
-    <script src="src/workout-recorder.js"></script>
-    <script src="src/main.js"></script>
+<script src="js/bluetooth.js"></script>
+<script src="js/powerGraph.js"></script>
+<script src="js/workout-recorder.js"></script>
+<script src="js/main.js"></script>
+<script src="/js/tcx-generator.js"></script>
 </body>
 </html>
+

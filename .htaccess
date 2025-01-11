@@ -1,0 +1,11 @@
+# Disable directory listing
+Options -Indexes
+
+# Allow access to JavaScript files
+<FilesMatch "\.js$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>
+
+# Proper MIME type for JavaScript
+AddType application/javascript .js
