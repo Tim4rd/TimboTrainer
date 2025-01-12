@@ -1,4 +1,8 @@
 // src/main.js
+let totalDistance = 0;
+let currentSpeed = 0;
+let lastUpdateTime = Date.now();
+const EFFICIENCY_FACTOR = 0.00029; // This can be tuned based on testing
 const powerMeter = new BluetoothPowerMeter();
 const workoutRecorder = new WorkoutRecorder();
 
@@ -18,26 +22,55 @@ document.addEventListener('DOMContentLoaded', () => {
     let heartRateTotal = 0;
     let cadenceTotal = 0;
     let dataPoints = 0;
+        // Tune efficiency factor for 30 km/h at 180 watts
+        const EFFICIENCY_FACTOR = 0.046; // 180W * 0.046 * 3.6 ≈ 30 km/h
 
-    // Set up power callback
-    powerMeter.onPowerUpdate = (power) => {
-        currentPower = power;
-        document.getElementById('currentPower').textContent = `${power}W`;
-        powerGraph.addPowerPoint(power);
-        
-        // Update running averages
-        powerTotal += power;
-        dataPoints++;
-        document.getElementById('avgPower').textContent = `${Math.round(powerTotal / dataPoints)}W`;
-        
-        // Update averages display
-        updateAveragesDisplay(powerGraph.averages);
-        
-        if (workoutRecorder.recording) {
-            workoutRecorder.addDataPoint(currentPower, currentHeartRate, currentCadence);
-        }
-    };
+                // Set up power callback
+                                powerMeter.onPowerUpdate = (power) => {
+                    currentPower = power;
+                    document.getElementById('currentPower').textContent = `${power}W`;
+                    powerGraph.addPowerPoint(power);
+                          if (currentSpeed > 0) {
+                              document.querySelector('.fa-road').classList.add('connected');
+                          } else {
+                              document.querySelector('.fa-road').classList.remove('connected');
+                          }
+                    // Update running averages
+                    powerTotal += power;
+                    dataPoints++;
+                    document.getElementById('avgPower').textContent = `${Math.round(powerTotal / dataPoints)}W`;
 
+                    // Update averages display
+                    updateAveragesDisplay(powerGraph.averages);
+
+                    // Calculate distance and speed only when power is being produced
+                    if (power > 0) {
+                        const currentTime = Date.now();
+                        const timeDelta = (currentTime - lastUpdateTime) / 1000;
+
+                        // Calculate speed (will now give ~30 km/h at 180 watts)
+                        currentSpeed = (power * EFFICIENCY_FACTOR) * 3.6;
+
+                        // Calculate distance increment
+                        const distanceIncrement = (currentSpeed / 3600) * timeDelta;
+                        totalDistance += distanceIncrement;
+
+                        // Force display updates
+                        requestAnimationFrame(() => {
+                            document.getElementById('distance').textContent = `${totalDistance.toFixed(2)} km`;
+                            document.getElementById('speed').textContent = `${currentSpeed.toFixed(1)} km/h`;
+                        });
+
+                        lastUpdateTime = currentTime;
+                    } else {
+                        currentSpeed = 0;
+                        document.getElementById('speed').textContent = '0.0 km/h';
+                    }
+
+                    if (workoutRecorder.recording) {
+                        workoutRecorder.addDataPoint(currentPower, currentHeartRate, currentCadence, currentSpeed, totalDistance);
+                    }
+};
     powerMeter.onHeartRateUpdate = (heartRate) => {
         currentHeartRate = heartRate;
         document.getElementById('heartRate').textContent = `${heartRate} BPM`;
@@ -136,4 +169,13 @@ function resetAverages() {
     heartRateTotal = 0;
     cadenceTotal = 0;
     dataPoints = 0;
+    totalDistance = 0;
+    currentSpeed = 0;
+    lastUpdateTime = Date.now();
+    document.getElementById('distance').textContent = '0.00 km';
+    document.getElementById('speed').textContent = '0.0 km/h';
+}
+
+if (currentPower > 0 && currentCadence > 0) {
+    document.querySelector('.fa-road').classList.add('connected');
 }

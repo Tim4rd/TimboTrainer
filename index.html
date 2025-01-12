@@ -2,7 +2,6 @@
 <html>
 <head>
     <title>Cycling Power Meter</title>
-    <link rel="stylesheet" href="style.css">
     <meta http-equiv="Content-Security-Policy" 
         content="default-src 'self'; 
                  script-src 'self' 'unsafe-inline' 'unsafe-eval'; 
@@ -52,6 +51,17 @@
                         <span class="metric-label">Average HR:</span>
                         <span class="average-value" id="avgHeartRate">-- BPM</span>
                     </div>
+                    <div>
+                        <span class="metric-label">
+                            <i class="fas fa-road connection-indicator"></i>
+                            Distance:
+                        </span>
+                        <span class="metric-value" id="distance">0.00 km</span>
+                    </div>
+                    <div>
+                        <span class="metric-label">Speed:</span>
+                        <span class="metric-value" id="speed">0.0 km/h</span>
+                    </div>
                     
                     <div>
                         <span class="metric-label">
@@ -93,7 +103,7 @@
 <script src="js/powerGraph.js"></script>
 <script src="js/workout-recorder.js"></script>
 <script src="js/main.js"></script>
-<script src="/js/tcx-generator.js"></script>
+<script src="js/tcx-generator.js"></script>
 </body>
 </html>
 
