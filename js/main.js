@@ -22,8 +22,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let heartRateTotal = 0;
     let cadenceTotal = 0;
     let dataPoints = 0;
-        // Tune efficiency factor for 30 km/h at 180 watts
-        const EFFICIENCY_FACTOR = 0.046; // 180W * 0.046 * 3.6 ≈ 30 km/h
+        // Replace the existing EFFICIENCY_FACTOR constant with these values
+        const BASE_EFFICIENCY = 0.15;  // Tune this to get desired speed at reference power
+        const REFERENCE_POWER = 180;   // Reference power (180W should give ~30km/h)
 
                 // Set up power callback
                                 powerMeter.onPowerUpdate = (power) => {
@@ -49,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const timeDelta = (currentTime - lastUpdateTime) / 1000;
 
                         // Calculate speed (will now give ~30 km/h at 180 watts)
-                        currentSpeed = (power * EFFICIENCY_FACTOR) * 3.6;
+                        currentSpeed = Math.sqrt(power / REFERENCE_POWER) * (REFERENCE_POWER * BASE_EFFICIENCY);
 
                         // Calculate distance increment
                         const distanceIncrement = (currentSpeed / 3600) * timeDelta;
