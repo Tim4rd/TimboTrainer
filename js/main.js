@@ -2,8 +2,7 @@
 let totalDistance = 0;
 let currentSpeed = 0;
 let lastUpdateTime = Date.now();
-const EFFICIENCY_FACTOR = 0.00029; // This can be tuned based on testing
-const powerMeter = new BluetoothPowerMeter();
+const EFFICIENCY_FACTOR = 0.046; // 180W * 0.046 * 3.6 ≈ 30 km/hconst powerMeter = new BluetoothPowerMeter();
 const workoutRecorder = new WorkoutRecorder();
 
 // Wait for DOM to be fully loaded before initializing graph
@@ -11,6 +10,49 @@ document.addEventListener('DOMContentLoaded', () => {
     const powerMeter = new BluetoothPowerMeter();
     const powerGraph = new PowerGraph('powerGraph');
     const workoutRecorder = new WorkoutRecorder();
+    const workoutDisplay = new WorkoutDisplay('workoutCanvas');
+
+    // Create workout instance
+    const workout = new StructuredWorkout()
+        .warmup(10, 150)
+        .interval(5, 200, 3, 150, 1)
+        .cooldown(10, 130);
+
+    workoutDisplay.setWorkout(workout);
+
+    // Get button references
+    const startWorkoutBtn = document.getElementById('startWorkoutBtn');
+    const pauseWorkoutBtn = document.getElementById('pauseWorkoutBtn');
+
+    // Add workout button handlers
+    startWorkoutBtn.addEventListener('click', () => {
+        workout.start();
+        startWorkoutBtn.disabled = true;
+        pauseWorkoutBtn.disabled = false;
+        requestAnimationFrame(updateWorkout);
+    });
+   
+    pauseWorkoutBtn.addEventListener('click', () => {
+        if (workout.isRunning) {
+            workout.pause();
+            pauseWorkoutBtn.textContent = 'Resume Workout';
+        } else {
+            workout.resume();
+            pauseWorkoutBtn.textContent = 'Pause Workout';
+            requestAnimationFrame(updateWorkout);
+        }
+    });
+
+    function updateWorkout() {
+        if (workout.isRunning) {
+            const targetPower = workout.update();
+            if (targetPower !== null) {
+                document.getElementById('targetPower').textContent = `Target: ${Math.round(targetPower)}W`;
+                workoutDisplay.updateProgress();
+                requestAnimationFrame(updateWorkout);
+            }
+        }
+    }
 
     // Add these variables to track current values
     let currentPower = 0;
@@ -22,9 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let heartRateTotal = 0;
     let cadenceTotal = 0;
     let dataPoints = 0;
-        // Replace the existing EFFICIENCY_FACTOR constant with these values
-        const BASE_EFFICIENCY = 0.15;  // Tune this to get desired speed at reference power
-        const REFERENCE_POWER = 180;   // Reference power (180W should give ~30km/h)
+        // Tune efficiency factor for 30 km/h at 180 watts
+        const EFFICIENCY_FACTOR = 0.046; // 180W * 0.046 * 3.6 ≈ 30 km/h
 
                 // Set up power callback
                                 powerMeter.onPowerUpdate = (power) => {
@@ -50,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const timeDelta = (currentTime - lastUpdateTime) / 1000;
 
                         // Calculate speed (will now give ~30 km/h at 180 watts)
-                        currentSpeed = Math.sqrt(power / REFERENCE_POWER) * (REFERENCE_POWER * BASE_EFFICIENCY);
+                        currentSpeed = (power * EFFICIENCY_FACTOR) * 3.6;
 
                         // Calculate distance increment
                         const distanceIncrement = (currentSpeed / 3600) * timeDelta;
@@ -179,4 +220,25 @@ function resetAverages() {
 
 if (currentPower > 0 && currentCadence > 0) {
     document.querySelector('.fa-road').classList.add('connected');
+}
+
+// Create and set up workout
+const workout = new StructuredWorkout()
+    .warmup(10, 150)
+    .interval(5, 200, 3, 150, 1)
+    .cooldown(10, 130);
+
+const workoutDisplay = new WorkoutDisplay('workoutCanvas');
+workoutDisplay.setWorkout(workout);
+
+// Make sure updateWorkout is called continuously
+function updateWorkout() {
+    if (workout.isRunning) {
+        const targetPower = workout.update();
+        if (targetPower !== null) {
+            document.getElementById('targetPower').textContent = `Target: ${Math.round(targetPower)}W`;
+            workoutDisplay.updateProgress();
+            requestAnimationFrame(updateWorkout);
+        }
+    }
 }

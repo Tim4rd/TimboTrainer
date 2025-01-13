@@ -93,17 +93,39 @@
             </div>
         </div>
 
+        <div class="metrics">
+            <!-- Add this near the top of your metrics -->
+            <div>
+                <span class="metric-label">Target Power:</span>
+                <span class="metric-value" id="targetPower">-- W</span>
+            </div>
+            <!-- Rest of your metrics -->
+        </div>
+
         <!-- Recording controls at bottom -->
         <div class="recording-controls">
             <button id="startRecordingBtn">Start Recording</button>
-            <button id="stopRecordingBtn" disabled>Stop & Save</button>
+            <button id="stopRecordingBtn" disabled>Stop Recording</button>
+            <button id="startWorkoutBtn">Start Workout</button>
+            <button id="pauseWorkoutBtn">Pause Workout</button>
         </div>
     </div>
+
+    <canvas id="workoutCanvas" width="1200" height="200"></canvas>
+    <div id="targetPower"></div>
+    
+
 <script src="js/bluetooth.js"></script>
 <script src="js/powerGraph.js"></script>
 <script src="js/workout-recorder.js"></script>
+<script src="js/workout.js"></script>
+<script src="js/workoutDisplay.js"></script>
 <script src="js/main.js"></script>
 <script src="js/tcx-generator.js"></script>
+
+
+
+
+
 </body>
 </html>
-
