@@ -93,11 +93,13 @@
             </div>
         </div>
 
-        <div class="metrics">
+        <div class="workout_metrics">
             <!-- Add this near the top of your metrics -->
             <div>
                 <span class="metric-label">Target Power:</span>
                 <span class="metric-value" id="targetPower">-- W</span>
+                <span class="metric label">Remaining Interval Time:</span>
+                <span class="metric-value" id="intTimeRemain"></span>
             </div>
             <!-- Rest of your metrics -->
         </div>
@@ -112,8 +114,7 @@
     </div>
 
     <canvas id="workoutCanvas" width="1200" height="200"></canvas>
-    <div id="targetPower"></div>
-    
+ 
 
 <script src="js/bluetooth.js"></script>
 <script src="js/powerGraph.js"></script>
@@ -122,9 +123,6 @@
 <script src="js/workoutDisplay.js"></script>
 <script src="js/main.js"></script>
 <script src="js/tcx-generator.js"></script>
-
-
-
 
 
 </body>

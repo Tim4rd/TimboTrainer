@@ -246,20 +246,6 @@ button.connected {
     transition: background-color 0.2s ease;
 }
 
-.grey-box {
-    background-color: #d8d8d8;
-    border-radius: 8px;
-    padding: 15px;
-    margin: 10px 0;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-/* Optional: even darker on hover */
-.grey-box:hover {
-    background-color: #d8d8d8;
-    transition: background-color 0.2s ease;
-}
-
 .connection-indicator {
     margin-right: 8px;
     opacity: 0.3;
@@ -436,3 +422,10 @@ button {
 #startWorkoutBtn:hover {
     background-color: #45a049;
 }
+
+
+
+.workout_metrics {
+    background: linear-gradient(to bottom right, #ffffff, #f8f8f8);
+}
+

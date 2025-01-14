@@ -2,7 +2,8 @@
 let totalDistance = 0;
 let currentSpeed = 0;
 let lastUpdateTime = Date.now();
-const EFFICIENCY_FACTOR = 0.046; // 180W * 0.046 * 3.6 ≈ 30 km/hconst powerMeter = new BluetoothPowerMeter();
+const EFFICIENCY_FACTOR = 0.046; // 180W * 0.046 * 3.6 ≈ 30 km/h
+const powerMeter = new BluetoothPowerMeter();
 const workoutRecorder = new WorkoutRecorder();
 
 // Wait for DOM to be fully loaded before initializing graph
@@ -14,9 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create workout instance
     const workout = new StructuredWorkout()
-        .warmup(10, 150)
-        .interval(5, 200, 3, 150, 1)
-        .cooldown(10, 130);
+        .warmup(5, 180)
+        .interval(5, 230, 3, 150, 1)
+        .ramp(5, 150, 250)
+        .cooldown(10, 180);
 
     workoutDisplay.setWorkout(workout);
 
@@ -31,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pauseWorkoutBtn.disabled = false;
         requestAnimationFrame(updateWorkout);
     });
-   
+
     pauseWorkoutBtn.addEventListener('click', () => {
         if (workout.isRunning) {
             workout.pause();
@@ -49,6 +51,34 @@ document.addEventListener('DOMContentLoaded', () => {
             if (targetPower !== null) {
                 document.getElementById('targetPower').textContent = `Target: ${Math.round(targetPower)}W`;
                 workoutDisplay.updateProgress();
+
+                // Get current segment info
+                // Get current segment info
+            const currentSegment = workout.getCurrentSegment();
+          
+
+            if (currentSegment && ['warmup', 'work', 'rest', 'ramp', 'cooldown'].includes(currentSegment.type)) {
+                // Calculate remaining time in the current interval
+                const elapsed = workout.getCurrentSegmentElapsed();
+                
+
+                const timeRemaining = Math.ceil(currentSegment.duration - elapsed);
+              
+
+                const minutes = Math.floor(timeRemaining / 60);
+                const seconds = timeRemaining % 60;
+
+                // Format as MM:SS
+                const timeDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                document.getElementById('intTimeRemain').textContent = timeDisplay;
+
+               
+            } else {
+                // If not in a valid interval, clear the display
+                document.getElementById('intTimeRemain').textContent = '--:--';
+              
+            }
+
                 requestAnimationFrame(updateWorkout);
             }
         }
@@ -64,72 +94,71 @@ document.addEventListener('DOMContentLoaded', () => {
     let heartRateTotal = 0;
     let cadenceTotal = 0;
     let dataPoints = 0;
-        // Tune efficiency factor for 30 km/h at 180 watts
-        const EFFICIENCY_FACTOR = 0.046; // 180W * 0.046 * 3.6 ≈ 30 km/h
 
-                // Set up power callback
-                                powerMeter.onPowerUpdate = (power) => {
-                    currentPower = power;
-                    document.getElementById('currentPower').textContent = `${power}W`;
-                    powerGraph.addPowerPoint(power);
-                          if (currentSpeed > 0) {
-                              document.querySelector('.fa-road').classList.add('connected');
-                          } else {
-                              document.querySelector('.fa-road').classList.remove('connected');
-                          }
-                    // Update running averages
-                    powerTotal += power;
-                    dataPoints++;
-                    document.getElementById('avgPower').textContent = `${Math.round(powerTotal / dataPoints)}W`;
+    // Set up power callback
+    powerMeter.onPowerUpdate = (power) => {
+        currentPower = power;
+        document.getElementById('currentPower').textContent = `${power}W`;
+        powerGraph.addPowerPoint(power);
+        if (currentSpeed > 0) {
+            document.querySelector('.fa-road').classList.add('connected');
+        } else {
+            document.querySelector('.fa-road').classList.remove('connected');
+        }
+        // Update running averages
+        powerTotal += power;
+        dataPoints++;
+        document.getElementById('avgPower').textContent = `${Math.round(powerTotal / dataPoints)}W`;
 
-                    // Update averages display
-                    updateAveragesDisplay(powerGraph.averages);
+        // Update averages display
+        updateAveragesDisplay(powerGraph.averages);
 
-                    // Calculate distance and speed only when power is being produced
-                    if (power > 0) {
-                        const currentTime = Date.now();
-                        const timeDelta = (currentTime - lastUpdateTime) / 1000;
+        // Calculate distance and speed only when power is being produced
+        if (power > 0) {
+            const currentTime = Date.now();
+            const timeDelta = (currentTime - lastUpdateTime) / 1000;
 
-                        // Calculate speed (will now give ~30 km/h at 180 watts)
-                        currentSpeed = (power * EFFICIENCY_FACTOR) * 3.6;
+            // Calculate speed (will now give ~30 km/h at 180 watts)
+            currentSpeed = (power * EFFICIENCY_FACTOR) * 3.6;
 
-                        // Calculate distance increment
-                        const distanceIncrement = (currentSpeed / 3600) * timeDelta;
-                        totalDistance += distanceIncrement;
+            // Calculate distance increment
+            const distanceIncrement = (currentSpeed / 3600) * timeDelta;
+            totalDistance += distanceIncrement;
 
-                        // Force display updates
-                        requestAnimationFrame(() => {
-                            document.getElementById('distance').textContent = `${totalDistance.toFixed(2)} km`;
-                            document.getElementById('speed').textContent = `${currentSpeed.toFixed(1)} km/h`;
-                        });
+            // Force display updates
+            requestAnimationFrame(() => {
+                document.getElementById('distance').textContent = `${totalDistance.toFixed(2)} km`;
+                document.getElementById('speed').textContent = `${currentSpeed.toFixed(1)} km/h`;
+            });
 
-                        lastUpdateTime = currentTime;
-                    } else {
-                        currentSpeed = 0;
-                        document.getElementById('speed').textContent = '0.0 km/h';
-                    }
+            lastUpdateTime = currentTime;
+        } else {
+            currentSpeed = 0;
+            document.getElementById('speed').textContent = '0.0 km/h';
+        }
 
-                    if (workoutRecorder.recording) {
-                        workoutRecorder.addDataPoint(currentPower, currentHeartRate, currentCadence, currentSpeed, totalDistance);
-                    }
-};
+        if (workoutRecorder.recording) {
+            workoutRecorder.addDataPoint(currentPower, currentHeartRate, currentCadence, currentSpeed, totalDistance);
+        }
+    };
+
     powerMeter.onHeartRateUpdate = (heartRate) => {
         currentHeartRate = heartRate;
         document.getElementById('heartRate').textContent = `${heartRate} BPM`;
-        
+
         // Update running average
         heartRateTotal += heartRate;
-        document.getElementById('avgHeartRate').textContent = 
+        document.getElementById('avgHeartRate').textContent =
             `${Math.round(heartRateTotal / dataPoints)} BPM`;
     };
 
     powerMeter.onCadenceUpdate = (cadence) => {
         currentCadence = cadence;
         document.getElementById('cadence').textContent = `${cadence} RPM`;
-        
+
         // Update running average
         cadenceTotal += cadence;
-        document.getElementById('avgCadence').textContent = 
+        document.getElementById('avgCadence').textContent =
             `${Math.round(cadenceTotal / dataPoints)} RPM`;
     };
 
@@ -196,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function updateAveragesDisplay(averages) {
     const avgContainer = document.getElementById('averages');
     if (!avgContainer) return;
-    
+
     avgContainer.innerHTML = `
         <div class="average-box">3s: ${Math.round(averages['3s'])}W</div>
         <div class="average-box">5s: ${Math.round(averages['5s'])}W</div>
@@ -220,25 +249,4 @@ function resetAverages() {
 
 if (currentPower > 0 && currentCadence > 0) {
     document.querySelector('.fa-road').classList.add('connected');
-}
-
-// Create and set up workout
-const workout = new StructuredWorkout()
-    .warmup(10, 150)
-    .interval(5, 200, 3, 150, 1)
-    .cooldown(10, 130);
-
-const workoutDisplay = new WorkoutDisplay('workoutCanvas');
-workoutDisplay.setWorkout(workout);
-
-// Make sure updateWorkout is called continuously
-function updateWorkout() {
-    if (workout.isRunning) {
-        const targetPower = workout.update();
-        if (targetPower !== null) {
-            document.getElementById('targetPower').textContent = `Target: ${Math.round(targetPower)}W`;
-            workoutDisplay.updateProgress();
-            requestAnimationFrame(updateWorkout);
-        }
-    }
 }
