@@ -110,11 +110,12 @@
             <button id="stopRecordingBtn" disabled>Stop Recording</button>
             <button id="startWorkoutBtn">Start Workout</button>
             <button id="pauseWorkoutBtn">Pause Workout</button>
+            <select id="workouts"><!-- From JS --></select>
         </div>
     </div>
+    
 
-    <canvas id="workoutCanvas" width="1200" height="200"></canvas>
- 
+    <canvas id="workoutCanvas" class="hidden" width="1200" height="200"></canvas>
 
 <script src="js/bluetooth.js"></script>
 <script src="js/powerGraph.js"></script>
@@ -123,6 +124,8 @@
 <script src="js/workoutDisplay.js"></script>
 <script src="js/main.js"></script>
 <script src="js/tcx-generator.js"></script>
+
+
 
 
 </body>

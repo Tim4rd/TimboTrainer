@@ -417,6 +417,7 @@ button {
     padding: 10px 20px;
     border-radius: 4px;
     cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 #startWorkoutBtn:hover {
@@ -429,3 +430,18 @@ button {
     background: linear-gradient(to bottom right, #ffffff, #f8f8f8);
 }
 
+
+
+.hidden {
+    visibility: hidden;
+}
+
+
+#workouts {
+    padding: 5px;
+    border-radius: 10px; /* Added border-radius to round the edges of the selection box */
+    border: 1px solid #ccc;
+    background-color: #fff; /* Optional: Set background color */
+   
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow for better visibility */
+}
